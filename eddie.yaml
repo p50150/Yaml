@@ -1,0 +1,151 @@
+---
+# Variable Store for Service / Application
+# Service Metadata
+managementgroup: ish
+subscription: fueiaas
+resourcegroup: eddie
+location: rz1.hag.fhooe.at
+livedoc_servicename: "{{ fhooe_managementgroup }}.{{ fhooe_subscription }}-{{ fhooe_resourcegroup }}"
+livedoc_url: https://eddie.projekte.fh-hagenberg.at
+livedoc_bussinesunit: ish
+livedoc_costcenter: 0
+livedoc_end_date: 0
+livedoc_environment: prod
+livedoc_serviceowner: fue
+livedoc_serviceclass: l0
+livedoc_legacy: false
+
+livedoc_managedby:
+  - manual
+
+livedoc_reference:
+  - FH20230309-0244
+
+livedoc_description: "Campus Hagenberg RZ DMZ Endpoint FuE Projektserver: eddie-fh-dev Gruppe: EDDIE / Projektleiter: Marc Kurz"
+livedoc_mermaid: |
+  sequenceDiagram
+    participant oam as nsgc_ish-fueiaas-eddie-oam
+    participant frontend as nsgc_ish-fueiaas-eddie-frontend
+    participant provider as nsgp_ish-fueiaas-eddie
+    participant consumer1 as service-dns
+    participant consumer1 as service-active-directory-ntp
+    provider ->>consumer1: DNS
+    provider ->>consumer2: 123
+    frontend ->>provider: 80,443,8002,8080,8017,9000,9093,9418
+    oam ->>provider: 22,80,443,3306,5432,8002,8080,8017,8083,9000,9093
+livedoc_notes: |
+  ## Usecase Frontend:
+  - Zugriff auf das Frontend UI des FuE Projektservers
+  - Standardfreischaltung über Network Securioty Group `nsgc_ish-fueiaas-eddie-frontend`
+
+  #### Beispiele
+  - Mitarbeiter
+
+  ## Usecase OAM:
+  - Zugriff für das Operations and Management , dieser Zugriff ist für einen umfassenden Systemzugriff auf das Service gedacht und sollte daher stark eingeschränkt sein.
+  - Standardfreischaltung über Network Security Group `nsgc_ish-fueiaas-eddie-oam`
+  - Alternativ über Identidy-Awareness `fhooe_sec_appl_vpn_access_eddie_oam`
+
+  #### Beispiele
+  - Systemadministratoren
+  - Wartungszugänge
+  - Monitoring
+
+# Resources
+# Network Security Groups
+# Firewall Service Groups
+cp_fwpolicy_hostcolor: "orange"
+cp_fwpolicy_resourcegroup: "rg_{{ livedoc_servicename }}"
+cp_fwpolicy_caseid: "{{ livedoc_reference }}"
+
+cp_fwpolicy:
+  fsg_provider:
+    nsgp_ish-fueiaas-eddie:
+      # IP Adresses or Hostnames (FQDN) of the Service Provider Endpoints
+      ep_eddie-fh-dev:
+        - 193.170.237.117
+  fsg_consumer:
+    nsgc_ish-fueiaas-eddie-frontend:
+      # IP Adresses or Hostnames (FQDN) for Endpoints to Access the Service on the Frontend
+      fw_groups:
+        - any
+      tcp_ports:
+        - https
+        - http
+        - 8002
+        - 8080
+        - 8017
+        - 8443
+        - 9000
+        - 9093
+        - 9418
+        - 9443
+        - 5000-5100
+  nsgc_ish-fueiaas-eddie-oam:
+    # Operations and Management Group
+    #  Identidy-Awareness:
+    fw_groups:
+      - nsgc_ish-fueiaas-eddie-oam
+      # - Net_Group_Hag_Lehre
+      # - Net_Group_Hag_Verwaltung_ALL
+      # - Net_Group_Hag_FuE_all
+    ia_groups:
+      - fhooe_sec_appl_vpn_access_eddie_oam
+    tcp_ports:
+      - ssh
+      - 80
+      - https
+      - 2600
+      - 3306
+      - 5432
+      - 8002
+      - 8080
+      - 8017
+      - 8083
+      - 8443
+      - 9000
+      - 9080
+      - 9093
+
+# Resource Secure Mobile Access (SMAC)
+cp_harmonyportal_applications:
+  ish-fueiaas-eddie:
+    description: "OAM Access to Service eddie oam"
+    app_site: rz1.hag.fhooe.at
+    app_type: ssh
+    app_fqdn: eddie.projekte.fh-hagenberg.at
+    app_access_groups:
+      - fhooe_sec_appl_vpn_access_eddie_oam
+
+# Resource Secure Network Access (SNAC)
+cp_harmonyportal_networkaccess:
+  fhooe-fileshare:
+    description: "OAM Access to Service eddie oam"
+    fsg_provider:
+      nsgp_ish-fueiaas-eddie:
+         # IP Adresses or Hostnames (FQDN) for Endpoints to Access the Service on the Frontend
+        Host_fhooefs1.fhooe.at:
+          ipv4: 193.170.237.117
+    fsg_consumer:
+      nsgc_ish-fueiaas-eddie-oam:
+        ia_group: fhooe_sec_appl_vpn_access_eddie_oam
+        tcp_port:
+          - ssh
+          - 80
+          - https
+          - 2600
+          - 3306
+          - 5432
+          - 8002
+          - 8080
+          - 8017
+          - 8083
+          - 8443
+          - 9000
+          - 9080
+          - 9093
+
+  # Resource Mobile Access (MAB)
+  mobile-access:
+    fhooe-sma-eddie:
+      - fhooe_sec_appl_vpn_access_eddie_oam
